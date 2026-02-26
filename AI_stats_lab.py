@@ -28,32 +28,49 @@ from sklearn.metrics import (
 # =========================================================
 
 def diabetes_linear_pipeline():
-    """
-    STEP 1: Load diabetes dataset.
-    STEP 2: Split into train and test (80-20).
-            Use random_state=42.
-    STEP 3: Standardize features using StandardScaler.
-            IMPORTANT:
-            - Fit scaler only on X_train
-            - Transform both X_train and X_test
-    STEP 4: Train LinearRegression model.
-    STEP 5: Compute:
-            - train_mse
-            - test_mse
-            - train_r2
-            - test_r2
-    STEP 6: Identify indices of top 3 features
-            with largest absolute coefficients.
 
-    RETURN:
-        train_mse,
-        test_mse,
-        train_r2,
-        test_r2,
-        top_3_feature_indices (list length 3)
-    """
+    # STEP 1: Load dataset
+    data = load_diabetes()
+    X = data.data
+    y = data.target
 
-    raise NotImplementedError
+    # STEP 2: Train-test split (80-20)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    # STEP 3: Standardize features (fit only on train)
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+
+    # STEP 4: Train Linear Regression model
+    model = LinearRegression()
+    model.fit(X_train_scaled, y_train)
+
+    # STEP 5: Compute metrics
+    y_train_pred = model.predict(X_train_scaled)
+    y_test_pred = model.predict(X_test_scaled)
+
+    train_mse = mean_squared_error(y_train, y_train_pred)
+    test_mse = mean_squared_error(y_test, y_test_pred)
+
+    train_r2 = r2_score(y_train, y_train_pred)
+    test_r2 = r2_score(y_test, y_test_pred)
+
+    # STEP 6: Top 3 features by absolute coefficient value
+    coef_abs = np.abs(model.coef_)
+    top_3_feature_indices = list(np.argsort(coef_abs)[-3:][::-1])
+
+    # Does the model overfit?
+    # If train R² is much higher than test R², model may be overfitting.
+    # If they are close, overfitting is minimal.
+
+    # Why is feature scaling important?
+    # Scaling ensures all features are on the same scale,
+    # which stabilizes optimization and makes coefficients comparable.
+
+    return train_mse, test_mse, train_r2, test_r2, top_3_feature_indices
 
 
 # =========================================================
@@ -61,24 +78,31 @@ def diabetes_linear_pipeline():
 # =========================================================
 
 def diabetes_cross_validation():
-    """
-    STEP 1: Load diabetes dataset.
-    STEP 2: Standardize entire dataset (after splitting is NOT needed for CV,
-            but use pipeline logic manually).
-    STEP 3: Perform 5-fold cross-validation
-            using LinearRegression.
-            Use scoring='r2'.
 
-    STEP 4: Compute:
-            - mean_r2
-            - std_r2
+    # STEP 1: Load dataset
+    data = load_diabetes()
+    X = data.data
+    y = data.target
 
-    RETURN:
-        mean_r2,
-        std_r2
-    """
+    # STEP 2: Standardize entire dataset
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
 
-    raise NotImplementedError
+    # STEP 3: 5-fold Cross-validation
+    model = LinearRegression()
+    scores = cross_val_score(model, X_scaled, y, cv=5, scoring='r2')
+
+    # STEP 4: Compute mean and std
+    mean_r2 = np.mean(scores)
+    std_r2 = np.std(scores)
+
+    # Standard deviation represents how much model performance
+    # varies across different folds.
+
+    # Cross-validation reduces variance risk by averaging performance
+    # across multiple train/test splits instead of relying on one split.
+
+    return mean_r2, std_r2
 
 
 # =========================================================
@@ -86,32 +110,46 @@ def diabetes_cross_validation():
 # =========================================================
 
 def cancer_logistic_pipeline():
-    """
-    STEP 1: Load breast cancer dataset.
-    STEP 2: Split into train-test (80-20).
-            Use random_state=42.
-    STEP 3: Standardize features.
-    STEP 4: Train LogisticRegression(max_iter=5000).
-    STEP 5: Compute:
-            - train_accuracy
-            - test_accuracy
-            - precision
-            - recall
-            - f1
-            - confusion matrix (optional to compute but not return)
 
-    In comments:
-        Explain what a False Negative represents medically.
+    # STEP 1: Load dataset
+    data = load_breast_cancer()
+    X = data.data
+    y = data.target
 
-    RETURN:
-        train_accuracy,
-        test_accuracy,
-        precision,
-        recall,
-        f1
-    """
+    # STEP 2: Train-test split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
 
-    raise NotImplementedError
+    # STEP 3: Standardize features
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+
+    # STEP 4: Train Logistic Regression
+    model = LogisticRegression(max_iter=5000)
+    model.fit(X_train_scaled, y_train)
+
+    # Predictions
+    y_train_pred = model.predict(X_train_scaled)
+    y_test_pred = model.predict(X_test_scaled)
+
+    # STEP 5: Metrics
+    train_accuracy = accuracy_score(y_train, y_train_pred)
+    test_accuracy = accuracy_score(y_test, y_test_pred)
+
+    precision = precision_score(y_test, y_test_pred)
+    recall = recall_score(y_test, y_test_pred)
+    f1 = f1_score(y_test, y_test_pred)
+
+    cm = confusion_matrix(y_test, y_test_pred)
+
+    # False Negative (medical meaning):
+    # A False Negative means the model predicts "no cancer"
+    # when the patient actually HAS cancer.
+    # This is dangerous because treatment may be delayed.
+
+    return train_accuracy, test_accuracy, precision, recall, f1
 
 
 # =========================================================
@@ -119,30 +157,46 @@ def cancer_logistic_pipeline():
 # =========================================================
 
 def cancer_logistic_regularization():
-    """
-    STEP 1: Load breast cancer dataset.
-    STEP 2: Split into train-test (80-20).
-    STEP 3: Standardize features.
-    STEP 4: For C in [0.01, 0.1, 1, 10, 100]:
-            - Train LogisticRegression(max_iter=5000, C=value)
-            - Compute train accuracy
-            - Compute test accuracy
 
-    STEP 5: Store results in dictionary:
-            {
-                C_value: (train_accuracy, test_accuracy)
-            }
+    # STEP 1: Load dataset
+    data = load_breast_cancer()
+    X = data.data
+    y = data.target
 
-    In comments:
-        - What happens when C is very small?
-        - What happens when C is very large?
-        - Which case causes overfitting?
+    # STEP 2: Train-test split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
 
-    RETURN:
-        results_dictionary
-    """
+    # STEP 3: Standardize
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
 
-    raise NotImplementedError
+    results = {}
+
+    # STEP 4: Train for different C values
+    for C_value in [0.01, 0.1, 1, 10, 100]:
+        model = LogisticRegression(max_iter=5000, C=C_value)
+        model.fit(X_train_scaled, y_train)
+
+        train_pred = model.predict(X_train_scaled)
+        test_pred = model.predict(X_test_scaled)
+
+        train_acc = accuracy_score(y_train, train_pred)
+        test_acc = accuracy_score(y_test, test_pred)
+
+        results[C_value] = (train_acc, test_acc)
+
+    # When C is very small:
+    # Strong regularization → simpler model → may underfit.
+
+    # When C is very large:
+    # Weak regularization → complex model → risk of overfitting.
+
+    # Overfitting usually occurs at very large C values.
+
+    return results
 
 
 # =========================================================
@@ -150,24 +204,26 @@ def cancer_logistic_regularization():
 # =========================================================
 
 def cancer_cross_validation():
-    """
-    STEP 1: Load breast cancer dataset.
-    STEP 2: Standardize entire dataset.
-    STEP 3: Perform 5-fold cross-validation
-            using LogisticRegression(C=1, max_iter=5000).
-            Use scoring='accuracy'.
 
-    STEP 4: Compute:
-            - mean_accuracy
-            - std_accuracy
+    # STEP 1: Load dataset
+    data = load_breast_cancer()
+    X = data.data
+    y = data.target
 
-    In comments:
-        Explain why cross-validation is especially
-        important in medical diagnosis problems.
+    # STEP 2: Standardize entire dataset
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
 
-    RETURN:
-        mean_accuracy,
-        std_accuracy
-    """
+    # STEP 3: 5-fold CV
+    model = LogisticRegression(C=1, max_iter=5000)
+    scores = cross_val_score(model, X_scaled, y, cv=5, scoring='accuracy')
 
-    raise NotImplementedError
+    # STEP 4: Mean and Std
+    mean_accuracy = np.mean(scores)
+    std_accuracy = np.std(scores)
+
+    # Cross-validation is critical in medical diagnosis because
+    # it ensures the model performs consistently across different
+    # patient subsets and is not biased toward one specific split.
+
+    return mean_accuracy, std_accuracy
